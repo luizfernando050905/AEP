@@ -1,0 +1,146 @@
+#include <stdio.h>
+#include <string.h>
+
+#define MAX_USERS 100
+#define MAX_NAME_LEN 50
+#define MAX_EMAIL_LEN 50
+#define CRYPTO_KEY 0xAB
+
+typedef struct {
+    int id;
+    char nome[MAX_NAME_LEN];
+    char email[MAX_EMAIL_LEN];
+} User;
+
+void encrypt(char *text) {
+    for (int i = 0; i < strlen(text); i++) {
+        text[i] ^= CRYPTO_KEY;
+    }
+}
+
+void save_users(User *users, int total) {
+    FILE *file = fopen("users.txt", "w");
+    if (file == NULL) {
+        printf("Erro ao abrir o arquivo.\n");
+        return;
+    }
+    for (int i = 0; i < total; i++) {
+        encrypt(users[i].nome);
+        encrypt(users[i].email);
+        fprintf(file, "%d %s %s\n", users[i].id, users[i].nome, users[i].email);
+        encrypt(users[i].nome);
+        encrypt(users[i].email);
+    }
+    fclose(file);
+}
+
+int load_users(User *users) {
+    FILE *file = fopen("users.txt", "r");
+    if (file == NULL) {
+        return 0;
+    }
+    int total = 0;
+    while (fscanf(file, "%d %s %s", &users[total].id, users[total].nome, users[total].email) != EOF) {
+        encrypt(users[total].nome);
+        encrypt(users[total].email);
+        total++;
+    }
+    fclose(file);
+    return total;
+}
+
+void add_user(User *users, int *total) {
+    if (*total >= MAX_USERS) {
+        printf("Numero maximo de usuarios alcancado.\n");
+        return;
+    }
+    User new_user;
+    new_user.id = *total + 1;
+    printf("Digite o nome: ");
+    scanf(" %49[^\n]", new_user.nome);
+    printf("Digite o email: ");
+    scanf(" %49[^\n]", new_user.email);
+    users[*total] = new_user;
+    (*total)++;
+    save_users(users, *total);
+    printf("Usuario incluido com sucesso!\n");
+}
+
+void edit_user(User *users, int total) {
+    int id;
+    printf("Digite o ID do usuario para alterar: ");
+    scanf("%d", &id);
+    for (int i = 0; i < total; i++) {
+        if (users[i].id == id) {
+            printf("Digite o novo nome: ");
+            scanf(" %49[^\n]", users[i].nome);
+            printf("Digite o novo email: ");
+            scanf(" %49[^\n]", users[i].email);
+            save_users(users, total);
+            printf("Usuario alterado com sucesso!\n");
+            return;
+        }
+    }
+    printf("Usuario nao encontrado.\n");
+}
+
+void delete_user(User *users, int *total) {
+    int id;
+    printf("Digite o ID do usuario para excluir: ");
+    scanf("%d", &id);
+    for (int i = 0; i < *total; i++) {
+        if (users[i].id == id) {
+            for (int j = i; j < *total - 1; j++) {
+                users[j] = users[j + 1];
+            }
+            (*total)--;
+            save_users(users, *total);
+            printf("Usuario excluido com sucesso!\n");
+            return;
+        }
+    }
+    printf("Usuario nao encontrado.\n");
+}
+
+void list_users(User *users, int total) {
+    printf("Lista de Usuarios:\n");
+    for (int i = 0; i < total; i++) {
+        printf("ID: %d, Nome: %s, Email: %s\n", users[i].id, users[i].nome, users[i].email);
+    }
+}
+
+int main() {
+    User users[MAX_USERS];
+    int total_users = load_users(users);
+    int option;
+    do {
+        printf("\nMenu:\n");
+        printf("1. Incluir Usuario\n");
+        printf("2. Alterar Usuario\n");
+        printf("3. Excluir Usuario\n");
+        printf("4. Listar Usuarios\n");
+        printf("0. Sair\n");
+        printf("Escolha uma opcao: ");
+        scanf("%d", &option);
+        switch (option) {
+            case 1:
+                add_user(users, &total_users);
+                break;
+            case 2:
+                edit_user(users, total_users);
+                break;
+            case 3:
+                delete_user(users, &total_users);
+                break;
+            case 4:
+                list_users(users, total_users);
+                break;
+            case 0:
+                printf("Sair\n");
+                break;
+            default:
+                printf("Opcao invalida.\n");
+        }
+    } while (option != 0);
+    return 0;
+}
